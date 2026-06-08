@@ -1,0 +1,88 @@
+name: Complete Microservices CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # FRONTEND
+
+      - name: Build Frontend Image
+        run: |
+          docker build -t frontend ./frontend
+
+      - name: Tag Frontend Image
+        run: |
+          docker tag frontend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
+
+      - name: Push Frontend Image
+        run: |
+          docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
+
+      # BACKEND
+
+      - name: Build Backend Image
+        run: |
+          docker build -t backend ./backend
+
+      - name: Tag Backend Image
+        run: |
+          docker tag backend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
+
+      - name: Push Backend Image
+        run: |
+          docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
+
+      # ADMIN
+
+      - name: Build Admin Image
+        run: |
+          docker build -t admin ./admin
+
+      - name: Tag Admin Image
+        run: |
+          docker tag admin:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
+
+      - name: Push Admin Image
+        run: |
+          docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
+
+      # DEPLOY TO EC2
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+
+            cd /home/ubuntu/microservices
+
+            aws ecr get-login-password --region eu-north-1 | \
+            sudo docker login --username AWS --password-stdin 744420879952.dkr.ecr.eu-north-1.amazonaws.com
+
+            sudo docker compose pull
+
+            sudo docker compose up -d
