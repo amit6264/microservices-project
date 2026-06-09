@@ -1,4 +1,4 @@
-name: Complete Microservices CI/CD in aws ec2
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,83 +6,106 @@ on:
       - main
 
 jobs:
-
-  deploy:
-
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: eu-north-1
 
-      - name: Login to Amazon ECR
+      - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
       # FRONTEND
-
-      - name: Build Frontend Image
+      - name: Build frontend image
         run: |
           docker build -t frontend ./frontend
-
-      - name: Tag Frontend Image
-        run: |
           docker tag frontend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
 
-      - name: Push Frontend Image
+      - name: Push frontend
         run: |
           docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
 
       # BACKEND
-
-      - name: Build Backend Image
+      - name: Build backend image
         run: |
           docker build -t backend ./backend
-
-      - name: Tag Backend Image
-        run: |
           docker tag backend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
 
-      - name: Push Backend Image
+      - name: Push backend
         run: |
           docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
 
       # ADMIN
-
-      - name: Build Admin Image
+      - name: Build admin image
         run: |
           docker build -t admin ./admin
-
-      - name: Tag Admin Image
-        run: |
           docker tag admin:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
 
-      - name: Push Admin Image
+      - name: Push admin
         run: |
           docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
 
-      # DEPLOY TO EC2
+      # SONARQUBE
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
+      # DEPLOY
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Install docker if missing
+            if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com | sh
+            fi
 
-            cd /home/ubuntu/microservices
+            # Install docker compose if missing
+            if ! docker compose version &> /dev/null; then
+              sudo apt update
+              sudo apt install docker-compose-plugin -y
+            fi
+
+            mkdir -p app
+            cd app
+
+            cat > docker-compose.yml <<'EOF'
+            version: '3.8'
+
+            services:
+              frontend:
+                image: 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
+                ports:
+                  - "3000:3000"
+
+              backend:
+                image: 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
+                ports:
+                  - "5000:5000"
+
+              admin:
+                image: 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
+                ports:
+                  - "3001:3001"
+            EOF
 
             aws ecr get-login-password --region eu-north-1 | \
-            sudo docker login --username AWS --password-stdin 744420879952.dkr.ecr.eu-north-1.amazonaws.com
+              docker login --username AWS --password-stdin \
+              744420879952.dkr.ecr.eu-north-1.amazonaws.com
 
-            sudo docker compose pull
-
-            sudo docker compose up -d
+            docker compose pull
+            docker compose down
+            docker compose up -d
