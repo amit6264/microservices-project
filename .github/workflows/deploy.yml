@@ -1,4 +1,4 @@
-name: Complete Microservices CI/CD on aws
+name: Complete Microservices CI/CD with SonarQube
 
 on:
   push:
@@ -6,13 +6,61 @@ on:
       - main
 
 jobs:
+  sonar-scan:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # FRONTEND SCAN
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Frontend SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: frontend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      # BACKEND SCAN
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Backend SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      # ADMIN SCAN
+      - name: Install Admin Dependencies
+        working-directory: admin
+        run: npm install
+
+      - name: Admin SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: admin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
   deploy:
-
+    needs: sonar-scan
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -27,49 +75,36 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       # FRONTEND
-
       - name: Build Frontend Image
-        run: |
-          docker build -t frontend ./frontend
+        run: docker build -t frontend ./frontend
 
       - name: Tag Frontend Image
-        run: |
-          docker tag frontend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
+        run: docker tag frontend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
 
       - name: Push Frontend Image
-        run: |
-          docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
+        run: docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/frontend:latest
 
       # BACKEND
-
       - name: Build Backend Image
-        run: |
-          docker build -t backend ./backend
+        run: docker build -t backend ./backend
 
       - name: Tag Backend Image
-        run: |
-          docker tag backend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
+        run: docker tag backend:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
 
       - name: Push Backend Image
-        run: |
-          docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
+        run: docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/backend:latest
 
       # ADMIN
-
       - name: Build Admin Image
-        run: |
-          docker build -t admin ./admin
+        run: docker build -t admin ./admin
 
       - name: Tag Admin Image
-        run: |
-          docker tag admin:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
+        run: docker tag admin:latest 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
 
       - name: Push Admin Image
-        run: |
-          docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
+        run: docker push 744420879952.dkr.ecr.eu-north-1.amazonaws.com/admin:latest
 
       # DEPLOY TO EC2
-
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
@@ -77,12 +112,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-
             cd /home/ubuntu/microservices
-
             aws ecr get-login-password --region eu-north-1 | \
             sudo docker login --username AWS --password-stdin 744420879952.dkr.ecr.eu-north-1.amazonaws.com
-
             sudo docker compose pull
-
             sudo docker compose up -d
