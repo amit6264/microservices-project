@@ -24,7 +24,7 @@ jobs:
         run: npm install
 
       - name: Frontend SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         with:
           projectBaseDir: frontend
         env:
@@ -37,7 +37,7 @@ jobs:
         run: npm install
 
       - name: Backend SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         with:
           projectBaseDir: backend
         env:
@@ -50,7 +50,7 @@ jobs:
         run: npm install
 
       - name: Admin SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         with:
           projectBaseDir: admin
         env:
