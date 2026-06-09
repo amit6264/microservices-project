@@ -11,6 +11,6 @@ app.listen(5000, () => {
 });
 
 
-let user = null;
+// let user = null;
 
-console.log(user.name);
+// console.log(user.name);
