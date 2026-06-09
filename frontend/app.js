@@ -1,14 +1,14 @@
-const express = require("express");
+// const express = require("express");
 
-const app = express();
+// const app = express();
 
-app.get("/", (req, res) => {
-  res.send("Frontend Service Running AWS Ec2 instance");
-});
+// app.get("/", (req, res) => {
+//   res.send("Frontend Service Running AWS Ec2 instance");
+// });
 
-app.listen(3000, () => {
-  console.log("Frontend running on 3000");
-});
+// app.listen(3000, () => {
+//   console.log("Frontend running on 3000");
+// });
 
 
 
