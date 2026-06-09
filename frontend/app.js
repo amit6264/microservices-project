@@ -9,3 +9,17 @@ app.get("/", (req, res) => {
 app.listen(3000, () => {
   console.log("Frontend running on 3000");
 });
+
+
+
+function add(a, b) {
+  return a + b;
+}
+
+function addNumbers(a, b) {
+  return a + b;
+}
+
+function sum(a, b) {
+  return a + b;
+}
