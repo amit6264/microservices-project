@@ -9,3 +9,8 @@ app.get("/", (req, res) => {
 app.listen(5000, () => {
   console.log("Backend running on 5000");
 });
+
+
+let user = null;
+
+console.log(user.name);
