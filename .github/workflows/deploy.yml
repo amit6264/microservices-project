@@ -1,4 +1,4 @@
-name: Complete Microservices CI/CD
+name: Complete Microservices CI/CD in aws ec2
 
 on:
   push:
