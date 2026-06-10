@@ -1,4 +1,4 @@
-name: Complete Microservices CI/CD with SonarQube
+name: Complete Microservices CI/CD with SonarQube deploy
 
 on:
   push:
