@@ -3,7 +3,7 @@ const express = require("express");
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("Frontend Service Running AWS Ec2 instance");
+  res.send("Frontend Service Running AWS deploy");
 });
 
 app.listen(3000, () => {
